@@ -1,6 +1,7 @@
 # vall-e-encodec
 
 ## Baseline text to mhubert unit
+https://huggingface.co/voidful/mhubert-unit-tts
 
 To train the mhubert model for generating text to unit, follow the steps below:
 
