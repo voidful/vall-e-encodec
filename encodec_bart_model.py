@@ -1,15 +1,44 @@
 import random
 from typing import Optional, Tuple, Union, List
 
+import math
 import torch
 from torch import nn
 from torch.nn import CrossEntropyLoss
 from transformers import BartForConditionalGeneration, BartConfig
 from transformers.modeling_outputs import Seq2SeqLMOutput, BaseModelOutput
-from transformers.models.bart.modeling_bart import shift_tokens_right, BartModel, BartDecoder, BartEncoder, _expand_mask
+from transformers.models.bart.modeling_bart import shift_tokens_right, BartModel, BartDecoder, BartEncoder, \
+    _expand_mask, BartEncoderLayer, BartLearnedPositionalEmbedding
 
 
 class BartEncodecEncoder(BartEncoder):
+    def __init__(self, config: BartConfig, embed_tokens: Optional[nn.Embedding] = None):
+        super().__init__(config)
+
+        self.dropout = config.dropout
+        self.layerdrop = config.encoder_layerdrop
+
+        embed_dim = config.d_model
+        self.padding_idx = config.pad_token_id
+        self.max_source_positions = config.max_position_embeddings
+        self.embed_scale = math.sqrt(embed_dim) if config.scale_embedding else 1.0
+
+        self.embed_tokens = nn.Embedding(config.vocab_size, embed_dim, self.padding_idx)
+
+        if embed_tokens is not None:
+            self.embed_tokens.weight = embed_tokens.weight
+
+        self.embed_positions = BartLearnedPositionalEmbedding(
+            config.max_position_embeddings,
+            embed_dim,
+        )
+        self.layers = nn.ModuleList([BartEncoderLayer(config) for _ in range(config.encoder_layers)])
+        self.layernorm_embedding = nn.LayerNorm(embed_dim)
+        self.learning_weight = nn.Parameter(torch.ones(8, 1, 1, 1))
+        self.gradient_checkpointing = False
+        # Initialize weights and apply final processing
+        self.post_init()
+
     def forward(
             self,
             input_ids: torch.LongTensor = None,
@@ -31,7 +60,7 @@ class BartEncodecEncoder(BartEncoder):
             raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
         elif input_ids is not None:
             input = input_ids
-            input_ids = input_ids.view(-1, input_ids.shape[-1])
+            input_ids = input_ids.view(-1, 8, input_ids.shape[-1])
         elif inputs_embeds is not None:
             input = inputs_embeds[:, :, -1]
         else:
@@ -39,13 +68,13 @@ class BartEncodecEncoder(BartEncoder):
 
         if inputs_embeds is None:
             inputs_embeds = []
-            for i in range(input_ids.shape[0]):
-                input_scale = self.embed_tokens(input_ids[i, :]) * self.embed_scale
+            for i in range(8):
+                input_scale = self.embed_tokens(input_ids[:, i, :]) * self.embed_scale
                 embed_pos = self.embed_positions(input[:, i, :]).unsqueeze(0)
                 embed_pos = embed_pos.to(input.device)
                 inputs_embeds.append(input_scale + embed_pos)
-            inputs_embeds = torch.stack(inputs_embeds, dim=0).sum(dim=0).squeeze(1)
-
+            weighted_inputs_embeds = torch.mul(torch.cat(inputs_embeds, dim=0), self.learning_weight)
+            inputs_embeds = torch.sum(weighted_inputs_embeds, dim=0)
         hidden_states = inputs_embeds
         hidden_states = self.layernorm_embedding(hidden_states)
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
