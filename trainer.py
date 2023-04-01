@@ -38,46 +38,6 @@ training_args = Seq2SeqTrainingArguments(
     predict_with_generate=True,
     fp16=True,
     gradient_accumulation_steps=2,
-)from datasets import load_dataset
-from jiwer import wer
-from transformers import (
-    AutoTokenizer,
-    DataCollatorForSeq2Seq,
-    Seq2SeqTrainer,
-    Seq2SeqTrainingArguments
-)
-
-from encodec_bart_model import BartEncodecForConditionalGeneration
-
-# Load dataset and tokenizer
-dataset = load_dataset("voidful/librispeech_encodec")
-tokenizer = AutoTokenizer.from_pretrained("voidful/bart-base-unit")
-model = BartEncodecForConditionalGeneration.from_pretrained("voidful/bart-base-unit")
-
-# Split the dataset into training and validation sets
-
-train_dataset = dataset['trainclean100']
-# train_dataset = dataset['validationclean']
-valid_dataset = dataset['validationclean']
-
-# Set training parameters
-
-training_args = Seq2SeqTrainingArguments(
-    output_dir="./training_output",
-    num_train_epochs=3,
-    per_device_train_batch_size=2,
-    per_device_eval_batch_size=2,
-    warmup_steps=500,
-    weight_decay=0.01,
-    logging_dir="./logs",
-    logging_steps=10,
-    save_steps=100,
-    save_total_limit=2,
-    evaluation_strategy="steps",
-    eval_steps=100,
-    predict_with_generate=True,
-    fp16=True,
-    gradient_accumulation_steps=2,
 )
 
 # Define a data collator to handle tokenization
