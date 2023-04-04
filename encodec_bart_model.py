@@ -5,6 +5,7 @@ import math
 import torch
 from torch import nn
 from torch.nn import CrossEntropyLoss
+import torch.nn.functional as F
 from transformers import BartForConditionalGeneration, BartConfig
 from transformers.modeling_outputs import Seq2SeqLMOutput, BaseModelOutput
 from transformers.models.bart.modeling_bart import shift_tokens_right, BartModel, BartDecoder, BartEncoder, \
@@ -34,7 +35,8 @@ class BartEncodecEncoder(BartEncoder):
         )
         self.layers = nn.ModuleList([BartEncoderLayer(config) for _ in range(config.encoder_layers)])
         self.layernorm_embedding = nn.LayerNorm(embed_dim)
-        self.learning_weight = nn.Parameter(torch.ones(8, 1, 1, 1))
+        learning_weight_init = torch.arange(8, 0, step=-1).float().view(8, 1, 1, 1)
+        self.learning_weight = nn.Parameter(learning_weight_init)
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
@@ -66,15 +68,18 @@ class BartEncodecEncoder(BartEncoder):
         else:
             raise ValueError("You have to specify either input_ids or inputs_embeds")
 
+        ENCODEC_RANGE = 8
         if inputs_embeds is None:
             inputs_embeds = []
-            for i in range(8):
+            for i in range(ENCODEC_RANGE):
                 input_scale = self.embed_tokens(input_ids[:, i, :]) * self.embed_scale
-                embed_pos = self.embed_positions(input[:, i, :]).unsqueeze(0)
-                embed_pos = embed_pos.to(input.device)
-                inputs_embeds.append(input_scale + embed_pos)
-            weighted_inputs_embeds = torch.mul(torch.cat(inputs_embeds, dim=0), self.learning_weight)
+                inputs_embeds.append(input_scale)
+            weighted_inputs_embeds = torch.mul(torch.stack(inputs_embeds, dim=0), F.softmax(self.learning_weight, dim=0))
             inputs_embeds = torch.sum(weighted_inputs_embeds, dim=0)
+            # inputs_embeds = torch.sum(torch.stack(inputs_embeds, dim=0), dim=0)
+            embed_pos = self.embed_positions(inputs_embeds)
+            embed_pos = embed_pos.to(input.device)
+            inputs_embeds = inputs_embeds + embed_pos
         hidden_states = inputs_embeds
         hidden_states = self.layernorm_embedding(hidden_states)
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
