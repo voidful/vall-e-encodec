@@ -7,7 +7,6 @@ from transformers import (
     Seq2SeqTrainingArguments, BartForConditionalGeneration
 )
 
-
 # Load dataset and tokenizer
 dataset = load_dataset("voidful/librispeech_encodec")
 tokenizer = AutoTokenizer.from_pretrained("voidful/bart-base-unit")
@@ -44,6 +43,7 @@ data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 def pad_sequences(sequences, max_length, padding_value):
     return [sequence + [padding_value] * (max_length - len(sequence)) for sequence in sequences]
 
+
 # Define training and validation functions
 def process_data_to_model_inputs(batch):
     input_ids = []
@@ -54,6 +54,7 @@ def process_data_to_model_inputs(batch):
     max_length = 1023  # You can set this to a suitable value based on your dataset
 
     for b in range(len(batch['text'])):
+        # first layer AR data
         data = tokenizer(batch["text"][b], padding='max_length', truncation=True, max_length=max_length)
         encode_input = tokenizer.convert_tokens_to_ids([f"v_tok_{u}" for u in batch[f'encodec_{0}'][b]])
         decoder_input_id = [tokenizer.bos_token_id] + encode_input
@@ -63,10 +64,11 @@ def process_data_to_model_inputs(batch):
         decoder_input_ids.append(decoder_input_id)
         labels.append(label)
 
+        # 1-7 layer NAR data
         for i in range(1, 8):
             decoder_input_id = tokenizer.convert_tokens_to_ids(
-                [f"v_tok_{u}" for u in batch[f'encodec_{i - 1}'][b]])
-            label = tokenizer.convert_tokens_to_ids([f"v_tok_{u}" for u in batch[f'encodec_{i}'][b]])
+                [f"v_tok_{u + (i - 1) * 1000}" for u in batch[f'encodec_{i - 1}'][b]])
+            label = tokenizer.convert_tokens_to_ids([f"v_tok_{u + i * 1000}" for u in batch[f'encodec_{i}'][b]])
             input_ids.append(data['input_ids'])
             attention_mask.append(data['attention_mask'])
             decoder_input_ids.append(decoder_input_id)
@@ -82,7 +84,6 @@ def process_data_to_model_inputs(batch):
         "decoder_input_ids": decoder_input_ids,
         "labels": labels
     }
-
 
 
 def filter_examples(example):

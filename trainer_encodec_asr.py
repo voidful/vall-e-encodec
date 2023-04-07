@@ -37,6 +37,7 @@ training_args = Seq2SeqTrainingArguments(
     learning_rate=5e-5,
     weight_decay=0,
     predict_with_generate=True,
+    generation_max_length=300,
     fp16=True,
     save_total_limit=3,
 )
