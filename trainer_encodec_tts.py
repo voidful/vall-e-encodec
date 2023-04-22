@@ -67,8 +67,8 @@ def process_data_to_model_inputs(batch):
         # 1-7 layer NAR data
         for i in range(1, 8):
             decoder_input_id = tokenizer.convert_tokens_to_ids(
-                [f"v_tok_{u + (i - 1) * 1000}" for u in batch[f'encodec_{i - 1}'][b]])
-            label = tokenizer.convert_tokens_to_ids([f"v_tok_{u + i * 1000}" for u in batch[f'encodec_{i}'][b]])
+                [f"v_tok_{u + (i - 1) * 1024}" for u in batch[f'encodec_{i - 1}'][b]])
+            label = tokenizer.convert_tokens_to_ids([f"v_tok_{u + i * 1024}" for u in batch[f'encodec_{i}'][b]])
             input_ids.append(data['input_ids'])
             attention_mask.append(data['attention_mask'])
             decoder_input_ids.append(decoder_input_id)
