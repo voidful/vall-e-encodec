@@ -59,7 +59,7 @@ def process_data_to_model_inputs(batch):
         encodec_input = []
         for i in range(8):
             encodec_input.append(
-                tokenizer.convert_tokens_to_ids([f"v_tok_{u + i * 1000}" for u in batch[f'encodec_{i}'][b]]))
+                tokenizer.convert_tokens_to_ids([f"v_tok_{u + i * 1024}" for u in batch[f'encodec_{i}'][b]]))
         input_datas.append(encodec_input)
     # Pad the input data sequences and create attention masks
     padded_input_datas = []
