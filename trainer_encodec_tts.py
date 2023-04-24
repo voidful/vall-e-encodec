@@ -63,16 +63,15 @@ def process_data_to_model_inputs(batch):
         attention_mask.append(data['attention_mask'])
         decoder_input_ids.append(decoder_input_id)
         labels.append(label)
-
-        # 1-7 layer NAR data
-        for i in range(1, 8):
-            decoder_input_id = tokenizer.convert_tokens_to_ids(
-                [f"v_tok_{u + (i - 1) * 1024}" for u in batch[f'encodec_{i - 1}'][b]])
-            label = tokenizer.convert_tokens_to_ids([f"v_tok_{u + i * 1024}" for u in batch[f'encodec_{i}'][b]])
-            input_ids.append(data['input_ids'])
-            attention_mask.append(data['attention_mask'])
-            decoder_input_ids.append(decoder_input_id)
-            labels.append(label)
+        # # 1-7 layer NAR data
+        # for i in range(1, 8):
+        #     decoder_input_id = tokenizer.convert_tokens_to_ids(
+        #         [f"v_tok_{u + (i - 1) * 1024}" for u in batch[f'encodec_{i - 1}'][b]])
+        #     label = tokenizer.convert_tokens_to_ids([f"v_tok_{u + i * 1024}" for u in batch[f'encodec_{i}'][b]])
+        #     input_ids.append(data['input_ids'])
+        #     attention_mask.append(data['attention_mask'])
+        #     decoder_input_ids.append(decoder_input_id)
+        #     labels.append(label)
 
     # Pad decoder_input_ids and labels
     decoder_input_ids = pad_sequences(decoder_input_ids, max_length=max_length, padding_value=tokenizer.pad_token_id)
@@ -113,11 +112,14 @@ def compute_metrics(eval_pred):
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
     # Compute WER
-    wer_value = wer(decoded_labels, decoded_preds)
+    wer_value = wer([" ".join(filter(None, i.split("v_tok_"))) for i in decoded_labels],
+                    [" ".join(filter(None, i.split("v_tok_"))) for i in decoded_preds])
     print("pred_result")
     print("=================================")
     for i in range(10):
-        print(decoded_labels[i], " ///// ", decoded_preds[i])
+        print("target:" + labels[i])
+        print("pred:" + predictions[i])
+        print("-----------------")
     print("=================================")
     return {"wer": wer_value}
 
