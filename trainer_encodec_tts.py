@@ -21,8 +21,8 @@ valid_dataset = dataset['validationclean']
 training_args = Seq2SeqTrainingArguments(
     output_dir="./training_output",
     num_train_epochs=50,
-    per_device_train_batch_size=2,
-    per_device_eval_batch_size=2,
+    per_device_train_batch_size=8,
+    per_device_eval_batch_size=8,
     warmup_steps=500,
     weight_decay=0.01,
     logging_dir="./logs",
@@ -33,7 +33,7 @@ training_args = Seq2SeqTrainingArguments(
     predict_with_generate=True,
     learning_rate=5e-4,
     fp16=True,
-    gradient_accumulation_steps=4
+    gradient_accumulation_steps=2
 )
 data_collator = DataCollatorWithPadding(tokenizer)
 
@@ -106,6 +106,7 @@ valid_dataset = valid_dataset.map(process_data_to_model_inputs,
                                   batched=True,
                                   batch_size=training_args.per_device_eval_batch_size
                                   )
+train_dataset = train_dataset.shuffle(seed=42)
 
 
 def compute_metrics(eval_pred):
