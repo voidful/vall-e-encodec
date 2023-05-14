@@ -279,8 +279,12 @@ class BartEncodecDecoder(BartPretrainedModel):
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input) * self.embed_scale
 
-        type_condition_tensor = (input_ids[:, 0] == self.config.decoder_start_token_id).unsqueeze(1).unsqueeze(
-            2).unsqueeze(3)
+        if input_ids.shape[1] == 1:
+            type_condition_tensor = torch.tensor([True]). \
+                unsqueeze(1).unsqueeze(2).unsqueeze(3)
+        else:
+            type_condition_tensor = (input_ids[:, 0] == self.config.decoder_start_token_id). \
+                unsqueeze(1).unsqueeze(2).unsqueeze(3)
         attention_mask = self._prepare_decoder_attention_mask(
             attention_mask, type_condition_tensor, input_shape, inputs_embeds, past_key_values_length
         )

@@ -10,6 +10,7 @@ dataset = load_dataset("voidful/librispeech_encodec", split="trainclean100")
 dataset = dataset.shuffle(seed=42).select(range(30))
 tokenizer = AutoTokenizer.from_pretrained("voidful/bart-base-unit")
 model = BartEncodecForConditionalGeneration.from_pretrained("./checkpoint-45356/")
+model.config.forced_bos_token_id = None
 model = model.to('cuda')
 
 inputs = tokenizer(dataset["text"][0],
@@ -17,9 +18,15 @@ inputs = tokenizer(dataset["text"][0],
                    truncation=True,
                    max_length=1024,
                    return_tensors="pt").to('cuda')
-decode_ar = model.generate(**inputs, max_length=1024, num_beams=1, do_sample=False)
-decoded_tok = tokenizer.batch_decode(decode_ar, skip_special_tokens=True)[0]
 
+encode_input = tokenizer(tokenizer.convert_ids_to_tokens(model.config.decoder_start_token_id) +"".join([f"v_tok_{u}" for u in dataset[f'encodec_0'][0]]),return_tensors='pt',add_special_tokens=False).to('cuda')
+encode_input = encode_input['input_ids']
+inputs['decoder_input_ids'] = encode_input[:,:50]
+
+bad_words_ids = [[tokenizer.convert_tokens_to_ids(f'v_tok_{i}')] for i in range(1025,1024*8)]
+
+decode_ar = model.generate(**inputs,max_length=1024, num_beams=1, do_sample=True, use_cache=True, bad_words_ids=bad_words_ids)
+decoded_tok = tokenizer.batch_decode(decode_ar, skip_special_tokens=True)[0]
 
 def nar_decode(batch_code, layer=0):
     base_input = inputs
