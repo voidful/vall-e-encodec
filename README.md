@@ -1,5 +1,10 @@
 # vall-e-encodec
 
+## generated result
+https://github.com/voidful/vall-e-encodec/assets/10904842/b53ad6b3-998c-4828-b93f-368931372d14
+
+
+
 ## Baseline text to mhubert unit
 https://huggingface.co/voidful/mhubert-unit-tts
 
