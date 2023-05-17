@@ -62,19 +62,18 @@ def process_data_to_model_inputs(batch):
                 tokenizer.convert_tokens_to_ids([f"v_tok_{u + i * 1024}" for u in batch[f'encodec_{i}'][b]]))
         input_datas.append(encodec_input)
     # Pad the input data sequences and create attention masks
-    padded_input_datas = []
-    attention_masks = []
-    for input_data in input_datas:
-        padded_input_data = []
-        for seq in input_data:
-            seq_len = len(seq)
-            padded_seq = seq + [tokenizer.pad_token_id] * (max_len - seq_len)
-            mask = [1] * seq_len + [0] * (max_len - seq_len)
-            padded_input_data.append(padded_seq)
-        padded_input_datas.append(padded_input_data)
-        attention_masks.append(mask)
-    batch["input_ids"] = padded_input_datas
-    batch["attention_mask"] = attention_masks
+    padded_input_datas = torch.nn.utils.rnn.pad_sequence(
+        [torch.tensor(data).transpose(0, 1) for data in input_datas], 
+        batch_first=True, 
+        padding_value=tokenizer.pad_token_id)  # pad 到最長
+    # [BSZ, 8, MAX_SEQ] 切到 max_len
+    padded_input_datas = padded_input_datas[:, :max_len].transpose(1, 2)  
+    attention_masks = torch.zeros((len(input_datas), max_len), dtype=int)  # 預設是 0
+    for data_id, data in enumerate(input_datas):
+        first_of_eight_code = data[0]
+        attention_masks[data_id, :len(first_of_eight_code)] = 1  # 有資料的是 1
+    batch["input_ids"] = padded_input_datas    # torch.Size([BSZ, 8, SEQ_LEN])
+    batch["attention_mask"] = attention_masks  # torch.Size([BSZ, SEQ_LEN])
     return batch
 
 
