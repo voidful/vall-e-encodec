@@ -1,5 +1,19 @@
 # vall-e-encodec
 
+## Model and checkpoint availability
+
+- The historical Hugging Face ID `voidful/bart_base_encodec` redirects to
+  [`voidful/bart-base-unit`](https://huggingface.co/voidful/bart-base-unit).
+  That repository contains the BART base model and tokenizer used as a starting
+  point by the training scripts; it is not the trained EnCodec checkpoint.
+- [`inference.py`](inference.py) expects a locally trained
+  `./checkpoint-45356/` directory. No download for that exact checkpoint is
+  listed in this repository or its
+  [GitHub releases](https://github.com/voidful/vall-e-encodec/releases).
+- The available [mHuBERT text-to-unit baseline](https://huggingface.co/voidful/mhubert-unit-tts)
+  has usage instructions, but uses different speech units and is not a drop-in
+  checkpoint for `inference.py`.
+
 ## generated result
 https://github.com/voidful/vall-e-encodec/assets/10904842/b53ad6b3-998c-4828-b93f-368931372d14
 
